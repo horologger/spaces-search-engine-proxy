@@ -1,7 +1,7 @@
 {
-  "name": "spaces-resolver",
+  "name": "spaces-search-engine-proxy",
   "version": "1.0.0",
-  "description": "URL resolver server with special case handling",
+  "description": "Spaces Name Resolution as a browser search engine proxy",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
