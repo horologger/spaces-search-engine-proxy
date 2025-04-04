@@ -98,7 +98,27 @@ app.get('/', async (req, res) => {
     }
     try {
         const records = await queryDNS(query);
-        res.json(records);
+        if (records?.authorities?.length === 0) {
+            res.json(records);
+        }
+        else {
+            // Loop through authorities and get the A records
+            var found = false;
+            for (const authority of records?.authorities ?? []) {
+                // Just get the first A record  
+                if (authority.type === 'A') {
+                    const ip_addr = authority.data;
+                    const space_name = authority.name;
+                    console.log(space_name + ' is redirecting to:', 'http://' + ip_addr);
+                    res.writeHead(302, { 'Location': 'http://' + ip_addr });
+                    res.end();
+                    found = true;
+                }
+            }
+            if (!found) {
+                res.json(records);
+            }
+        }
     }
     catch (error) {
         res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
