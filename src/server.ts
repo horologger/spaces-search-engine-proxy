@@ -5,6 +5,8 @@ import dns from 'dns-packet';
 import { Buffer } from 'buffer';
 
 const app = express();
+// const host = '127.0.0.1';
+const host = '192.168.1.69';
 const port = 3000;
 
 // Create Fabric instance with anchor setup
@@ -132,7 +134,7 @@ async function startServer() {
   try {
     await initFabric();
     app.listen(port, () => {
-      console.log(`Server running at http://127.0.0.1:${port}`);
+      console.log(`Server running at http://${host}:${port}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

@@ -9,6 +9,8 @@ const anchor_1 = require("@spacesprotocol/fabric/dist/anchor");
 const dns_packet_1 = __importDefault(require("dns-packet"));
 const buffer_1 = require("buffer");
 const app = (0, express_1.default)();
+// const host = '127.0.0.1';
+const host = '192.168.1.69';
 const port = 3000;
 // Create Fabric instance with anchor setup
 let fabric;
@@ -129,7 +131,7 @@ async function startServer() {
     try {
         await initFabric();
         app.listen(port, () => {
-            console.log(`Server running at http://127.0.0.1:${port}`);
+            console.log(`Server running at http://${host}:${port}`);
         });
     }
     catch (error) {
