@@ -136,17 +136,50 @@ app.get('/', async (req: Request, res: Response) => {
 async function startServer() {
   try {
 
+    console.log("Starting IP address lookup...");
     var ip = require('whatismyip');
+    console.log("whatismyip module loaded:", ip);
+    
     var options = {
       url: 'http://checkip.dyndns.org/',
+      // url: 'https://api.ipify.org/',
       truncate: '',
       timeout: 60000,
       matchIndex: 0
     };
+    console.log("Using options:", options);
 
     ip.whatismyip(options, function(err: Error | null, data: string){
+      console.log("whatismyip callback received");
       if (err === null) {
-        console.log("Search Engine URL: " + "http://" + (JSON.parse(data)).ip + "/?q=%s");
+        console.log("Raw data received:", data);
+        try {
+          // Check if data is already an object
+          let parsedData;
+          if (typeof data === 'string') {
+            parsedData = JSON.parse(data);
+          } else {
+            parsedData = data;
+          }
+          
+          console.log("Parsed data:", parsedData);
+          
+          // Extract IP address based on the structure
+          let ipAddress;
+          if (parsedData.ip) {
+            ipAddress = parsedData.ip;
+          } else if (typeof parsedData === 'string' && parsedData.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/)) {
+            ipAddress = parsedData;
+          } else {
+            console.log("Could not extract IP address from data");
+            return;
+          }
+          
+          console.log("Search Engine URL: " + "http://" + ipAddress + "/?q=%s");
+        } catch (parseError) {
+          console.error("Error parsing JSON:", parseError);
+          console.log("Data that failed to parse:", data);
+        }
       } else {
         console.log("Error getting IP address:", err);
       }
