@@ -127,6 +127,7 @@ app.get('/', async (req: Request, res: Response) => {
     const records = await queryDNS(query);
     
     if (!records) {
+      console.log(query + " : No records found.");
       return res.status(404).json({ error: `No records found for ${query}` });
     }
     
@@ -147,7 +148,7 @@ app.get('/', async (req: Request, res: Response) => {
         }
       }
       if (!found) {
-        console.log("No A record found for " + query);
+        console.log(query + " : No A record found.");
         res.json(records);
       }
     }
