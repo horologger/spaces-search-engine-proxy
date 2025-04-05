@@ -8,6 +8,8 @@ const fabric_1 = require("@spacesprotocol/fabric");
 const anchor_1 = require("@spacesprotocol/fabric/dist/anchor");
 const dns_packet_1 = __importDefault(require("dns-packet"));
 const buffer_1 = require("buffer");
+// Global variables
+let globalExternalAddress = null;
 const app = (0, express_1.default)();
 // const host = '127.0.0.1';
 // const host = '192.168.1.69';
@@ -95,14 +97,14 @@ app.get('/', async (req, res) => {
           </style>
         </head>
         <body>
-          <h1>Spaces Query Error</h1>
+          <h1>Spaces Search Engine Query</h1>
           <div class="error">
             <p>Query parameter "q" is required</p>
           </div>
           <div class="example">
             <h2>Example Usage:</h2>
             <p>Try querying a space by adding the "q" parameter:</p>
-            <p><code>http://127.0.0.1:${port}/?q=@example</code></p>
+            <p><code>http://${globalExternalAddress}:${port}/?q=@space</code></p>
           </div>
         </body>
       </html>
@@ -175,6 +177,8 @@ async function startServer() {
                         console.log("Could not extract IP address from data");
                         return;
                     }
+                    // Store the IP address in the global variable
+                    globalExternalAddress = ipAddress;
                     console.log("Search Engine URL: " + "http://" + ipAddress + "/?q=%s");
                 }
                 catch (parseError) {
@@ -188,6 +192,9 @@ async function startServer() {
         });
         await initFabric();
         app.listen(port, () => {
+            if (globalExternalAddress) {
+                console.log(`Public IP address: ${globalExternalAddress}`);
+            }
             console.log(`Server running at http://${host}:${port}`);
         });
     }
