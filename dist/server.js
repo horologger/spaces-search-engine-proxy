@@ -66,11 +66,15 @@ async function queryDNS(space) {
 app.get('/', async (req, res) => {
     const query = req.query.q;
     if (!query) {
+        // Create a fallback URL in case globalExternalAddress is not available
+        const exampleUrl = globalExternalAddress
+            ? `http://${globalExternalAddress}/?q=@space`
+            : `http://${host}:${port}/?q=@space`;
         return res.send(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Spaces Query Error</title>
+          <title>Spaces Search Engine Proxy</title>
           <style>
             body {
               font-family: Arial, sans-serif;
@@ -97,14 +101,14 @@ app.get('/', async (req, res) => {
           </style>
         </head>
         <body>
-          <h1>Spaces Search Engine Query</h1>
+          <h1>Spaces Search Engine Proxy</h1>
           <div class="error">
             <p>Query parameter "q" is required</p>
           </div>
           <div class="example">
             <h2>Example Usage:</h2>
             <p>Try querying a space by adding the "q" parameter:</p>
-            <p><code>http://${globalExternalAddress}:${port}/?q=@space</code></p>
+            <p><a href="${exampleUrl}">${exampleUrl}</a></p>
           </div>
         </body>
       </html>
