@@ -135,6 +135,23 @@ app.get('/', async (req: Request, res: Response) => {
 // Start server
 async function startServer() {
   try {
+
+    var ip = require('whatismyip');
+    var options = {
+      url: 'http://checkip.dyndns.org/',
+      truncate: '',
+      timeout: 60000,
+      matchIndex: 0
+    };
+
+    ip.whatismyip(options, function(err: Error | null, data: string){
+      if (err === null) {
+        console.log("Search Engine URL: " + "http://" + (JSON.parse(data)).ip + "/?q=%s");
+      } else {
+        console.log("Error getting IP address:", err);
+      }
+    });
+    
     await initFabric();
     app.listen(port, () => {
       console.log(`Server running at http://${host}:${port}`);

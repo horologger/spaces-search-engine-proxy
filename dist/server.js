@@ -11,6 +11,8 @@ const buffer_1 = require("buffer");
 const app = (0, express_1.default)();
 // const host = '127.0.0.1';
 // const host = '192.168.1.69';
+// export SPACES_SEP_HOST='192.168.1.87'
+// export SPACES_SEP_PORT='3000'
 const host = process.env.SPACES_SEP_HOST ? process.env.SPACES_SEP_HOST : '127.0.0.1';
 const port = process.env.SPACES_SEP_PORT ? parseInt(process.env.SPACES_SEP_PORT, 10) : 3000;
 // Create Fabric instance with anchor setup
@@ -130,6 +132,21 @@ app.get('/', async (req, res) => {
 // Start server
 async function startServer() {
     try {
+        var ip = require('whatismyip');
+        var options = {
+            url: 'http://checkip.dyndns.org/',
+            truncate: '',
+            timeout: 60000,
+            matchIndex: 0
+        };
+        ip.whatismyip(options, function (err, data) {
+            if (err === null) {
+                console.log("Search Engine URL: " + "http://" + (JSON.parse(data)).ip + "/?q=%s");
+            }
+            else {
+                console.log("Error getting IP address:", err);
+            }
+        });
         await initFabric();
         app.listen(port, () => {
             console.log(`Server running at http://${host}:${port}`);
