@@ -140,6 +140,7 @@ app.get('/', async (req: Request, res: Response) => {
         }
       }
       if (!found) {
+        console.log("No A record found for " + query);
         res.json(records);
       }
     }
