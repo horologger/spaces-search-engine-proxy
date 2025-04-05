@@ -7,6 +7,8 @@ import { Buffer } from 'buffer';
 const app = express();
 // const host = '127.0.0.1';
 // const host = '192.168.1.69';
+// export SPACES_SEP_HOST='192.168.1.87'
+// export SPACES_SEP_PORT='3000'
 const host = process.env.SPACES_SEP_HOST ? process.env.SPACES_SEP_HOST : '127.0.0.1';
 const port = process.env.SPACES_SEP_PORT ? parseInt(process.env.SPACES_SEP_PORT, 10) : 3000;
 
