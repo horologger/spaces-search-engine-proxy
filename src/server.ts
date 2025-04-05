@@ -44,14 +44,16 @@ async function initFabric(): Promise<void> {
 }
 
 // Query DNS records
-async function queryDNS(space: string): Promise<dns.Packet> {
+async function queryDNS(space: string): Promise<dns.Packet | null> {
   try {
     // Use the correct API to get DNS records
     const DNS_EVENT_KIND = 871222; // DNS event kind
     const res = await fabric.eventGet(space, DNS_EVENT_KIND, '', { latest: true });
     
     if (!res || !res.event) {
-      throw new Error('No records found');
+      // throw new Error('No records found');
+      console.log("No records found for " + space);
+      return null;
     }
     
     // Decode the DNS packet from the event content
@@ -123,6 +125,11 @@ app.get('/', async (req: Request, res: Response) => {
 
   try {
     const records = await queryDNS(query);
+    
+    if (!records) {
+      return res.status(404).json({ error: `No records found for ${query}` });
+    }
+    
     if (records?.authorities?.length === 0) {
       res.json(records);
     } else {
