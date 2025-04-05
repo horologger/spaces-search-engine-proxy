@@ -15,6 +15,13 @@ const app = (0, express_1.default)();
 // export SPACES_SEP_PORT='3000'
 const host = process.env.SPACES_SEP_HOST ? process.env.SPACES_SEP_HOST : '127.0.0.1';
 const port = process.env.SPACES_SEP_PORT ? parseInt(process.env.SPACES_SEP_PORT, 10) : 3000;
+// Log environment variable status
+if (!process.env.SPACES_SEP_HOST) {
+    console.warn('WARNING: SPACES_SEP_HOST environment variable not set. Using default: 127.0.0.1');
+}
+if (!process.env.SPACES_SEP_PORT) {
+    console.warn('WARNING: SPACES_SEP_PORT environment variable not set. Using default: 3000');
+}
 // Create Fabric instance with anchor setup
 let fabric;
 // Initialize Fabric
@@ -134,19 +141,18 @@ async function startServer() {
     try {
         console.log("Starting IP address lookup...");
         var ip = require('whatismyip');
-        console.log("whatismyip module loaded:", ip);
+        // console.log("whatismyip module loaded:", ip);
         var options = {
             url: 'http://checkip.dyndns.org/',
-            // url: 'https://api.ipify.org/',
             truncate: '',
             timeout: 60000,
             matchIndex: 0
         };
-        console.log("Using options:", options);
+        // console.log("Using options:", options);
         ip.whatismyip(options, function (err, data) {
             console.log("whatismyip callback received");
             if (err === null) {
-                console.log("Raw data received:", data);
+                // console.log("Raw data received:", data);
                 try {
                     // Check if data is already an object
                     let parsedData;
@@ -156,7 +162,7 @@ async function startServer() {
                     else {
                         parsedData = data;
                     }
-                    console.log("Parsed data:", parsedData);
+                    // console.log("Parsed data:", parsedData);
                     // Extract IP address based on the structure
                     let ipAddress;
                     if (parsedData.ip) {
