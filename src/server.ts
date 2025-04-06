@@ -31,7 +31,8 @@ async function initFabric(): Promise<void> {
   try {
     fabric = new Fabric({
       anchor: await AnchorStore.create({
-        localPath: 'data/root-anchors.json'
+        // localPath: 'data/root-anchors.json',
+        remoteUrls: ['http://70.251.209.207:7225/root-anchors.json']
       })
     });
     
