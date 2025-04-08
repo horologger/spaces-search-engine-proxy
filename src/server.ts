@@ -143,13 +143,59 @@ app.get('/', async (req: Request, res: Response) => {
           const ip_addr = authority.data;
           const space_name = authority.name;
           console.log(space_name + ' is redirecting to:', 'http://'+ip_addr);
-          res.writeHead(302, { 'Location': 'http://'+ip_addr });
-          res.end();
-          found = true;
+          if (!found) { 
+            res.writeHead(302, { 'Location': 'http://'+ip_addr });
+            res.end();
+            found = true;
+          }
+        }
+        if (authority.type === 'TXT') {
+          const data_arr = authority.data;
+          // const data_arr = [
+          //   {
+          //     "type": "Buffer",
+          //     "data": [58, 112, 97, 116, 104, 58, 55, 48, 46, 50, 53, 49, 46, 50, 48, 57, 46, 50, 48, 55, 47, 108, 117, 110, 100, 101, 47]
+          //   }
+          // ]
+              
+          const space_name = authority.name;
+          for (const data_elem of data_arr ?? []) {
+            // Check if the element is a Buffer
+            if (Buffer.isBuffer(data_elem)) {
+                const buffer = data_elem; // It's already a Buffer
+                const txt_str = buffer.toString('utf8');
+                console.log(space_name + ' txt (Buffer): ' + txt_str);
+                if (txt_str.startsWith(':path:')) {
+                  const path_str = txt_str.substring(6);
+                  if (!found) {
+                    res.writeHead(302, { 'Location': 'http://'+path_str });
+                    res.end();
+                    found = true;
+                  }
+                }
+                else {
+                  if (!found) {
+                    res.json({ error: 'No path found in TXT: ' + txt_str });
+                    found = true;
+                  }
+                }
+            } else if (typeof data_elem === 'string') {
+                // Handle if it's already a string
+                const txt_str = data_elem;
+                console.log(space_name + ' txt (string):' + txt_str);
+            } else {
+                // Handle other unexpected types if necessary
+                console.log(space_name + ' txt (unknown type):', data_elem);
+            }
+          }
+          // console.log(space_name + ' txt:' + txt_str); // txt_str is only available inside the loop/if block
+          // res.writeHead(302, { 'Location': 'http://'+ip_addr });
+          // res.end();
+          // found_txt = true;
         }
       }
       if (!found) {
-        console.log(query + " : No A record found.");
+        console.log(query + " : No A or TXT:path: record found.");
         res.json(records);
       }
     }
