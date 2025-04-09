@@ -173,6 +173,14 @@ app.get('/', async (req: Request, res: Response) => {
                     found = true;
                   }
                 }
+                else if (txt_str.startsWith(':pkar:')) {
+                  const path_str = txt_str.substring(6);
+                  if (!found) {
+                    res.writeHead(302, { 'Location': 'http://'+path_str+'./' });
+                    res.end();
+                    found = true;
+                  }
+                }
                 else {
                   if (!found) {
                     res.json({ info: 'No path found in TXT: ' + txt_str });
