@@ -175,7 +175,7 @@ app.get('/', async (req: Request, res: Response) => {
                 }
                 else {
                   if (!found) {
-                    res.json({ error: 'No path found in TXT: ' + txt_str });
+                    res.json({ info: 'No path found in TXT: ' + txt_str });
                     found = true;
                   }
                 }
