@@ -182,10 +182,7 @@ app.get('/', async (req: Request, res: Response) => {
                   }
                 }
                 else {
-                  if (!found) {
-                    res.json({ info: 'No path found in TXT: ' + txt_str });
-                    found = true;
-                  }
+                  console.log('No path or pkar found in TXT: ' + txt_str );
                 }
             } else if (typeof data_elem === 'string') {
                 // Handle if it's already a string
@@ -203,7 +200,7 @@ app.get('/', async (req: Request, res: Response) => {
         }
       }
       if (!found) {
-        console.log(query + " : No A or TXT:path: record found.");
+        console.log(query + " : No A or TXT:path: or TXT:pkar: record found.");
         res.json(records);
       }
     }
