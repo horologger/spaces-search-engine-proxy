@@ -8,12 +8,15 @@ import { Buffer } from 'buffer';
 let globalExternalAddress: string | null = null;
 
 const app = express();
-// const host = '127.0.0.1';
-// const host = '192.168.1.69';
+// const sep_host = '127.0.0.1';
+// const sep_host = '192.168.1.69';
 // export SPACES_SEP_HOST='192.168.1.87'
 // export SPACES_SEP_PORT='3000'
-const host = process.env.SPACES_SEP_HOST ? process.env.SPACES_SEP_HOST : '127.0.0.1';
-const port = process.env.SPACES_SEP_PORT ? parseInt(process.env.SPACES_SEP_PORT, 10) : 3000;
+const sep_host = process.env.SPACES_SEP_HOST ? process.env.SPACES_SEP_HOST : '127.0.0.1';
+const sep_port = process.env.SPACES_SEP_PORT ? parseInt(process.env.SPACES_SEP_PORT, 10) : 3000;
+const spaced_host = process.env.SPACED_HOST ? process.env.SPACED_HOST : '127.0.0.1';
+const spaced_port = process.env.SPACED_PORT ? parseInt(process.env.SPACED_PORT, 10) : 7225;
+
 
 // Log environment variable status
 if (!process.env.SPACES_SEP_HOST) {
@@ -22,6 +25,29 @@ if (!process.env.SPACES_SEP_HOST) {
 if (!process.env.SPACES_SEP_PORT) {
   console.warn('WARNING: SPACES_SEP_PORT environment variable not set. Using default: 3000');
 }
+if (!process.env.SPACED_HOST) {
+  console.warn('WARNING: SPACED_HOST environment variable not set. Using default: 127.0.0.1');
+}
+if (!process.env.SPACED_PORT) {
+  console.warn('WARNING: SPACED_PORT environment variable not set. Using default: 7225');
+}
+
+const search_engine_google = process.env.SPACES_SEP_GOOGLE ? process.env.SPACES_SEP_GOOGLE : '{google:baseURL}search?q=%s&{google:RLZ}{google:originalQueryForSuggestion}{google:assistedQueryStats}{google:searchFieldtrialParameter}{google:language}{google:prefetchSource}{google:searchClient}{google:sourceId}{google:contextualSearchVersion}ie={inputEncoding}';
+const search_engine_duckduckgo = process.env.SPACES_SEP_DUCKDUCKGO ? process.env.SPACES_SEP_DUCKDUCKGO : 'https://duckduckgo.com/?q=%s';
+const search_engine_bing = process.env.SPACES_SEP_BING ? process.env.SPACES_SEP_BING : 'https://www.bing.com/search?q=%s';
+const search_engine_yahoo = process.env.SPACES_SEP_YAHOO ? process.env.SPACES_SEP_YAHOO : 'https://search.yahoo.com/search{google:pathWildcard}?ei={inputEncoding}&fr=crmas_sfp&p=%s';
+const search_engine_yandex = process.env.SPACES_SEP_YANDEX ? process.env.SPACES_SEP_YANDEX : 'https://yandex.com/{yandex:searchPath}?text=%s';
+// const search_engine_ask = process.env.SPACES_SEP_ASK ? process.env.SPACES_SEP_ASK : 'https://www.ask.com/web?q=%s';
+// const search_engine_baidu = process.env.SPACES_SEP_BAIDU ? process.env.SPACES_SEP_BAIDU : 'https://www.baidu.com/s?wd=%s';
+// const search_engine_qwant = process.env.SPACES_SEP_QWANT ? process.env.SPACES_SEP_QWANT : 'https://www.qwant.com/?q=%s';
+// const search_engine_ecosia = process.env.SPACES_SEP_ECOCIA ? process.env.SPACES_SEP_ECOCIA : 'https://www.ecosia.org/search?q=%s';
+// const search_engine_startpage = process.env.SPACES_SEP_STARTPAGE ? process.env.SPACES_SEP_STARTPAGE : 'https://www.startpage.com/do/search?q=%s';
+// const search_engine_brave = process.env.SPACES_SEP_BRAVE ? process.env.SPACES_SEP_BRAVE : 'https://search.brave.com/search?q=%s';
+
+console.log("sep_host: " + sep_host);
+console.log("sep_port: " + sep_port);
+console.log("spaced_host: " + spaced_host);
+console.log("spaced_port: " + spaced_port);
 
 // Create Fabric instance with anchor setup
 let fabric: InstanceType<typeof Fabric>;
@@ -69,6 +95,43 @@ async function queryDNS(space: string): Promise<dns.Packet | null> {
   }
 }
 
+// Function to get space details via JSON-RPC
+async function getSpace(spaceName: string): Promise<any> {
+  const url = `http://${spaced_host}:${spaced_port}`; // Use backticks for template literal
+  const requestBody = {
+    jsonrpc: "2.0",
+    id: "1", // You might want a dynamic ID in a real application
+    method: "getspace",
+    params: [spaceName]
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Basic JSON-RPC error handling
+    if (data.error) {
+      throw new Error(`RPC Error: ${data.error.message} (Code: ${data.error.code})`);
+    }
+
+    return data.result; // Return the result part of the JSON-RPC response
+  } catch (error) {
+    console.error(`Error calling getSpace for ${spaceName}:`, error);
+    throw error; // Re-throw the error to be handled by the caller
+  }
+}
+
 // Express route handler
 app.get('/', async (req: Request, res: Response) => {
   const query = req.query.q as string;
@@ -77,7 +140,7 @@ app.get('/', async (req: Request, res: Response) => {
     // Create a fallback URL in case globalExternalAddress is not available
     const exampleUrl = globalExternalAddress 
       ? `http://${globalExternalAddress}/?q=@space`
-      : `http://${host}:${port}/?q=@space`;
+      : `http://${sep_host}:${sep_port}/?q=@space`;
       
     return res.send(`
       <!DOCTYPE html>
@@ -128,8 +191,31 @@ app.get('/', async (req: Request, res: Response) => {
     const records = await queryDNS(query);
     
     if (!records) {
-      console.log(query + " : No records found.");
-      return res.status(404).json({ error: `No records found for ${query}` });
+      console.log(query + " : No DNS records found. Checking space details...");
+      try {
+        const spaceInfo = await getSpace(query);
+
+        if (spaceInfo && spaceInfo.covenant) {
+          const covenantType = spaceInfo.covenant.type;
+          if (covenantType === 'transfer') {
+            // Customize this message as needed
+            return res.status(200).json({ message: `Space '${query}' is currently in a transfer state. No active DNS records found.` }); 
+          } else if (covenantType === 'bid') {
+            // Customize this message as needed
+            return res.status(200).json({ message: `Space '${query}' is currently up for bidding. No active DNS records found.` });
+          } else {
+            // Handle other covenant types if necessary, or fallback
+            return res.status(404).json({ error: `No active DNS records found for '${query}'. Space state: ${covenantType}` });
+          }
+        } else {
+          // Space found by getSpace, but no covenant info or unexpected structure
+           return res.status(404).json({ error: `No DNS records found for '${query}', and couldn't determine space state.` });
+        }
+      } catch (error) {
+        // Handle errors from getSpace (e.g., space doesn't exist at all)
+        console.error(`Error calling getSpace for ${query} after no DNS records found:`, error);
+        return res.status(404).json({ error: `Space '${query}' not found or error retrieving details.` });
+      }
     }
     
     if (records?.authorities?.length === 0) {
@@ -265,11 +351,11 @@ async function startServer() {
     });
     
     await initFabric();
-    app.listen(port, () => {
+    app.listen(sep_port, () => {
       if (globalExternalAddress) {
         console.log(`Public IP address: ${globalExternalAddress}`);
       }
-      console.log(`Server running at http://${host}:${port}`);
+      console.log(`Server running at http://${sep_host}:${sep_port}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
