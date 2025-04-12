@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import cookieParser from 'cookie-parser';
 import { Fabric } from '@spacesprotocol/fabric';
 import { AnchorStore } from '@spacesprotocol/fabric/dist/anchor';
 import dns from 'dns-packet';
@@ -8,6 +9,11 @@ import { Buffer } from 'buffer';
 let globalExternalAddress: string | null = null;
 
 const app = express();
+
+// Middleware setup
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
+
 // const sep_host = '127.0.0.1';
 // const sep_host = '192.168.1.69';
 // export SPACES_SEP_HOST='192.168.1.87'
@@ -48,6 +54,10 @@ console.log("sep_host: " + sep_host);
 console.log("sep_port: " + sep_port);
 console.log("spaced_host: " + spaced_host);
 console.log("spaced_port: " + spaced_port);
+
+const cookie_name = 'spaces_search_engine_proxy';
+const spaces_explorer_url = process.env.SPACES_EXPLORER_URL ? process.env.SPACES_EXPLORER_URL : 'https://explorer.spacesprotocol.org/space/';
+const spaces_pinning_url = process.env.SPACES_PINNING_URL ? process.env.SPACES_PINNING_URL : 'http://70.251.209.207/pin/';
 
 // Create Fabric instance with anchor setup
 let fabric: InstanceType<typeof Fabric>;
@@ -135,7 +145,48 @@ async function getSpace(spaceName: string): Promise<any> {
 // Express route handler
 app.get('/', async (req: Request, res: Response) => {
   const query = req.query.q as string;
-  
+  const searchCookie = req.cookies[cookie_name];
+
+  if (!searchCookie) {
+    // Cookie doesn't exist, show the selection form
+    // Pre-fill query if it exists in the URL already
+    const currentQuery = query || ''; 
+    return res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <title>Select Search Engine</title>
+          <style>
+            body { font-family: sans-serif; max-width: 600px; margin: 2em auto; padding: 1em; border: 1px solid #ccc; border-radius: 5px; }
+            label { display: block; margin-bottom: 0.5em; }
+            select, input[type="text"] { width: 100%; padding: 0.5em; margin-bottom: 1em; box-sizing: border-box; }
+            button { padding: 0.7em 1.5em; cursor: pointer; }
+          </style>
+      </head>
+      <body>
+          <h1>Choose Your Default Search Engine</h1>
+          <p>Since you haven't set a default search engine preference for non-Space queries, please select one below.</p>
+          <form action="/set_search_cookie" method="POST">
+              <label for="search_engine_url">Search Engine:</label>
+              <select id="search_engine_url" name="search_engine_url" required>
+                  <option value="${search_engine_google}">Google</option>
+                  <option value="${search_engine_duckduckgo}">DuckDuckGo</option>
+                  <option value="${search_engine_bing}">Bing</option>
+                  <option value="${search_engine_yahoo}">Yahoo</option>
+                  <option value="${search_engine_yandex}">Yandex</option>
+                  // Add other engines here if uncommented above
+              </select>
+
+              <label for="q">Custom Search Engine Query:</label>
+              <input type="text" id="search_engine_custom" name="search_engine_custom" value="" placeholder="Enter your search engine with %s for the query">
+
+              <button type="submit">Set Preference & Search</button>
+          </form>
+      </body>
+      </html>
+    `);
+  }
+
   if (!query) {
     // Create a fallback URL in case globalExternalAddress is not available
     const exampleUrl = globalExternalAddress 
@@ -198,23 +249,92 @@ app.get('/', async (req: Request, res: Response) => {
         if (spaceInfo && spaceInfo.covenant) {
           const covenantType = spaceInfo.covenant.type;
           if (covenantType === 'transfer') {
-            // Customize this message as needed
-            return res.status(200).json({ message: `Space '${query}' is currently in a transfer state. No active DNS records found.` }); 
+             // Restore transfer message -> Change to HTML page suggesting pinning service
+             //return res.status(200).json({ message: `Space '${query}' is currently in a transfer state. No active DNS records found.` }); 
+             res.setHeader('Content-Type', 'text/html');
+             return res.status(200).send(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                  <title>Space Transferring - ${query}</title>
+                  <style>
+                    body { font-family: sans-serif; max-width: 700px; margin: 2em auto; padding: 1.5em; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; text-align: center; }
+                    h1 { color: #cc3300; margin-bottom: 0.5em; }
+                    p { line-height: 1.6; color: #333; }
+                    a { color: #007bff; text-decoration: none; }
+                    a:hover { text-decoration: underline; }
+                    .pinning-link { display: inline-block; margin-top: 1.5em; padding: 0.8em 1.5em; background-color: #007bff; color: white; border-radius: 5px; font-weight: bold; }
+                    .pinning-link:hover { background-color: #0056b3; color: white; text-decoration: none; }
+                  </style>
+              </head>
+              <body>
+                  <h1>Are you the owner of ${query}?</h1>
+                  <p>This space is currently in a transfer state and has no active DNS records.</p>
+                  <p>If you are the owner, consider using the <strong>Spaces Pinning Service</strong> to ensure your records remain available even during transfers or lapses.</p>
+                  <a href="${spaces_pinning_url}" target="_blank" class="pinning-link">Learn about the Pinning Service</a> 
+                  
+              </body>
+              </html>
+            `);
           } else if (covenantType === 'bid') {
-            // Customize this message as needed
-            return res.status(200).json({ message: `Space '${query}' is currently up for bidding. No active DNS records found.` });
+             // Restore bid message -> Change to HTML page suggesting pinning service
+             //return res.status(200).json({ message: `Space '${query}' is currently up for bidding. No active DNS records found.` });
+             res.setHeader('Content-Type', 'text/html');
+             return res.status(200).send(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                  <title>Space Bidding - ${query}</title>
+                  <style>
+                    body { font-family: sans-serif; max-width: 700px; margin: 2em auto; padding: 1.5em; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; text-align: center; }
+                    h1 { color: #007bff; margin-bottom: 0.5em; }
+                    p { line-height: 1.6; color: #333; }
+                    a { color: #007bff; text-decoration: none; }
+                    a:hover { text-decoration: underline; }
+                    .pinning-link { display: inline-block; margin-top: 1.5em; padding: 0.8em 1.5em; background-color: #007bff; color: white; border-radius: 5px; font-weight: bold; }
+                    .pinning-link:hover { background-color: #0056b3; color: white; text-decoration: none; }
+                  </style>
+              </head>
+              <body>
+                  <h1>Are you bidding on ${query}?</h1>
+                  <p>This space is currently open for bidding.</p>
+                  <p>If you are interested in bidding on ${query}, please visit the <a href="${spaces_explorer_url}${query.substring(1)}" target="_blank">Spaces Explorer</a> to learn more.</p>
+                  <p>If you are the winner, consider using the <strong>Spaces Pinning Service</strong> to ensure your content remains available to the public.</p>
+                   <a href="${spaces_pinning_url}" target="_blank" class="pinning-link">Learn about the Pinning Service</a> 
+              </body>
+              </html>
+            `);
           } else {
-            // Handle other covenant types if necessary, or fallback
-            return res.status(404).json({ error: `No active DNS records found for '${query}'. Space state: ${covenantType}` });
+             // Not transfer or bid: redirect to Explorer
+             console.log(`Space '${query}' state is '${covenantType}'. No DNS records found. Redirecting to explorer.`);
+             const searchTerm = query.startsWith('@') ? query.substring(1) : query; // Remove leading '@' if present
+             const explorerRedirectUrl = spaces_explorer_url + searchTerm;
+
+             console.log(`Redirecting to Spaces Explorer: ${explorerRedirectUrl}`);
+             res.writeHead(302, { 'Location': explorerRedirectUrl });
+             return res.end(); // Stop execution
           }
         } else {
-          // Space found by getSpace, but no covenant info or unexpected structure
-           return res.status(404).json({ error: `No DNS records found for '${query}', and couldn't determine space state.` });
+          // Space found by getSpace, but no covenant info or unexpected structure -> Redirect to Explorer
+          console.error(`Space info for '${query}' found but structure unclear. Redirecting to explorer.`);
+          
+          const searchTerm = query.startsWith('@') ? query.substring(1) : query; // Remove leading '@' if present
+          const explorerRedirectUrl = spaces_explorer_url + searchTerm;
+          
+          console.log(`Redirecting to Spaces Explorer: ${explorerRedirectUrl}`);
+          res.writeHead(302, { 'Location': explorerRedirectUrl });
+          return res.end(); // Stop execution
         }
       } catch (error) {
-        // Handle errors from getSpace (e.g., space doesn't exist at all)
-        console.error(`Error calling getSpace for ${query} after no DNS records found:`, error);
-        return res.status(404).json({ error: `Space '${query}' not found or error retrieving details.` });
+        // Handle errors from getSpace (e.g., space doesn't exist at all) -> Redirect to Explorer
+        console.error(`Error calling getSpace for ${query} after no DNS records found. Redirecting to explorer:`, error);
+        
+        const searchTerm = query.startsWith('@') ? query.substring(1) : query; // Remove leading '@' if present
+        const explorerRedirectUrl = spaces_explorer_url + searchTerm;
+        
+        console.log(`Redirecting to Spaces Explorer: ${explorerRedirectUrl}`);
+        res.writeHead(302, { 'Location': explorerRedirectUrl });
+        return res.end(); // Stop execution
       }
     }
     
@@ -286,12 +406,80 @@ app.get('/', async (req: Request, res: Response) => {
         }
       }
       if (!found) {
-        console.log(query + " : No A or TXT:path: or TXT:pkar: record found.");
-        res.json(records);
+        console.log(query + " : No A or TXT:path: or TXT:pkar: record found. Falling back to web search.");
+        // Fallback: Use the search engine URL from the cookie
+        const searchUrlTemplate = req.cookies[cookie_name];
+        const searchTerm = query.startsWith('@') ? query.substring(1) : query; // Remove leading '@' if present
+        if (searchUrlTemplate) {
+          const searchUrl = searchUrlTemplate.replace('%s', encodeURIComponent(searchTerm));
+          console.log(`Redirecting to web search: ${searchUrl}`);
+          res.writeHead(302, { 'Location': searchUrl });
+          return res.end();
+        } else {
+          // Should not happen if the initial cookie check works, but handle defensively
+          console.error("Search cookie missing unexpectedly.");
+          res.status(500).json({ error: "Search preference cookie is missing." });
+        }
       }
     }
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    // Catch all for errors during DNS query or initial processing -> Treat as search
+    console.error(`Unhandled error during request processing for query '${query}'. Falling back to web search:`, error);
+    // res.status(500).json({ error: error instanceof Error ? error.message : String(error) }); // Old behavior
+    
+    // Fallback to web search
+    // Need access to req here, but it's not available in this catch scope directly 
+    // unless we restructure or pass req/res down. Let's assume req is accessible for now.
+    // NOTE: This requires `req` to be available in this scope.
+    //       A better approach might be to structure the try/catch differently.
+    try {
+        const searchCookie = req.cookies[cookie_name]; // Assuming req is available
+        const searchTerm = query.startsWith('@') ? query.substring(1) : query; 
+        if (searchCookie) {
+          const searchUrl = searchCookie.replace('%s', encodeURIComponent(searchTerm));
+          console.log(`Redirecting to web search due to error: ${searchUrl}`);
+          res.writeHead(302, { 'Location': searchUrl });
+          return res.end();
+        } else {
+          console.error("Search cookie missing when handling main processing error.");
+          // Cannot redirect without cookie, send error
+          res.status(500).json({ error: "An unexpected error occurred and search preference cookie is missing." });
+        }
+    } catch (fallbackError) {
+        // Catch error during the fallback itself
+        console.error("Error during fallback search redirection:", fallbackError);
+        res.status(500).json({ error: "An unexpected error occurred during fallback processing." });
+    }
+  }
+});
+
+// Endpoint to handle setting the search engine cookie
+app.post('/set_search_cookie', (req: Request, res: Response) => {
+  const { search_engine_url, q, search_engine_custom } = req.body;
+
+  // Determine which URL to use: prioritize custom input
+  const final_search_engine_url = search_engine_custom?.trim() || search_engine_url;
+
+  if (!final_search_engine_url) {
+    return res.status(400).send("Search engine URL (either selected or custom) is required.");
+  }
+
+  // Set the cookie
+  // You might want to configure options like maxAge, httpOnly, secure (for HTTPS) etc.
+  res.cookie(cookie_name, final_search_engine_url, { maxAge: 365 * 24 * 60 * 60 * 1000 }); // Expires in 1 year
+
+  // Redirect back to the main page with the query, if provided
+  const redirectUrl = q ? `/?q=${encodeURIComponent(q)}` : '/';
+  res.redirect(redirectUrl);
+});
+
+// Endpoint to delete the search engine cookie
+app.get('/del_search_cookie', (req: Request, res: Response) => {
+  if (req.cookies[cookie_name]) {
+    res.clearCookie(cookie_name);
+    res.send("Search engine preference cookie deleted.");
+  } else {
+    res.send("Search engine preference cookie not found.");
   }
 });
 
