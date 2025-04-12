@@ -271,7 +271,7 @@ app.get('/', async (req: Request, res: Response) => {
               <body>
                   <h1>Are you the owner of ${query}?</h1>
                   <p>This space is currently in a transfer state and has no active DNS records.</p>
-                  <p>You may check if it's available on the <a href="${spaces_market_url}${query.substring(1)}">secondary market</a> for purchase.</p>
+                  <p>You might want to check to see if it's available on the <a href="${spaces_market_url}${query.substring(1)}">secondary market</a> for purchase.</p>
                   <p>If you are the owner, consider using the <strong>Spaces Pinning Service</strong> to ensure your records remain available even during transfers or lapses.</p>
                   <a href="${spaces_pinning_url}" target="_blank" class="pinning-link">Learn about the Pinning Service</a> 
                   
