@@ -57,6 +57,7 @@ console.log("spaced_port: " + spaced_port);
 
 const cookie_name = 'spaces_search_engine_proxy';
 const spaces_explorer_url = process.env.SPACES_EXPLORER_URL ? process.env.SPACES_EXPLORER_URL : 'https://explorer.spacesprotocol.org/space/';
+const spaces_market_url = process.env.SPACES_MARKET_URL ? process.env.SPACES_MARKET_URL : 'https://spaces.market/space/';
 const spaces_pinning_url = process.env.SPACES_PINNING_URL ? process.env.SPACES_PINNING_URL : 'http://70.251.209.207/pin/';
 
 // Create Fabric instance with anchor setup
@@ -270,6 +271,7 @@ app.get('/', async (req: Request, res: Response) => {
               <body>
                   <h1>Are you the owner of ${query}?</h1>
                   <p>This space is currently in a transfer state and has no active DNS records.</p>
+                  <p>You may check if it's available on the <a href="${spaces_market_url}${query.substring(1)}">secondary market</a> for purchase.</p>
                   <p>If you are the owner, consider using the <strong>Spaces Pinning Service</strong> to ensure your records remain available even during transfers or lapses.</p>
                   <a href="${spaces_pinning_url}" target="_blank" class="pinning-link">Learn about the Pinning Service</a> 
                   
