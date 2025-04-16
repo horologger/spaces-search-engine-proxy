@@ -22,6 +22,7 @@ const sep_host = process.env.SPACES_SEP_HOST ? process.env.SPACES_SEP_HOST : '12
 const sep_port = process.env.SPACES_SEP_PORT ? parseInt(process.env.SPACES_SEP_PORT, 10) : 3000;
 const spaced_host = process.env.SPACED_HOST ? process.env.SPACED_HOST : '127.0.0.1';
 const spaced_port = process.env.SPACED_PORT ? parseInt(process.env.SPACED_PORT, 10) : 7225;
+const anchor = process.env.SPACES_SEP_ANCHOR ? process.env.SPACES_SEP_ANCHOR : '70.251.209.207:7225';  
 
 
 // Log environment variable status
@@ -37,7 +38,10 @@ if (!process.env.SPACED_HOST) {
 if (!process.env.SPACED_PORT) {
   console.warn('WARNING: SPACED_PORT environment variable not set. Using default: 7225');
 }
-
+if (!process.env.SPACES_SEP_ANCHOR) {
+  console.warn('WARNING: SPACES_SEP_ANCHOR environment variable not set. Using default: 70.251.209.207:7225');
+}
+  
 const search_engine_google = process.env.SPACES_SEP_GOOGLE ? process.env.SPACES_SEP_GOOGLE : '{google:baseURL}search?q=%s&{google:RLZ}{google:originalQueryForSuggestion}{google:assistedQueryStats}{google:searchFieldtrialParameter}{google:language}{google:prefetchSource}{google:searchClient}{google:sourceId}{google:contextualSearchVersion}ie={inputEncoding}';
 const search_engine_duckduckgo = process.env.SPACES_SEP_DUCKDUCKGO ? process.env.SPACES_SEP_DUCKDUCKGO : 'https://duckduckgo.com/?q=%s';
 const search_engine_bing = process.env.SPACES_SEP_BING ? process.env.SPACES_SEP_BING : 'https://www.bing.com/search?q=%s';
@@ -48,13 +52,13 @@ const search_engine_yandex = process.env.SPACES_SEP_YANDEX ? process.env.SPACES_
 // const search_engine_qwant = process.env.SPACES_SEP_QWANT ? process.env.SPACES_SEP_QWANT : 'https://www.qwant.com/?q=%s';
 // const search_engine_ecosia = process.env.SPACES_SEP_ECOCIA ? process.env.SPACES_SEP_ECOCIA : 'https://www.ecosia.org/search?q=%s';
 // const search_engine_startpage = process.env.SPACES_SEP_STARTPAGE ? process.env.SPACES_SEP_STARTPAGE : 'https://www.startpage.com/do/search?q=%s';
-// const search_engine_brave = process.env.SPACES_SEP_BRAVE ? process.env.SPACES_SEP_BRAVE : 'https://search.brave.com/search?q=%s';
+const search_engine_brave = process.env.SPACES_SEP_BRAVE ? process.env.SPACES_SEP_BRAVE : 'https://search.brave.com/search?q=%s';
 
 console.log("sep_host: " + sep_host);
 console.log("sep_port: " + sep_port);
 console.log("spaced_host: " + spaced_host);
 console.log("spaced_port: " + spaced_port);
-
+console.log("anchor: " + anchor);
 const cookie_name = 'spaces_search_engine_proxy';
 const spaces_explorer_url = process.env.SPACES_EXPLORER_URL ? process.env.SPACES_EXPLORER_URL : 'https://explorer.spacesprotocol.org/space/';
 const spaces_market_url = process.env.SPACES_MARKET_URL ? process.env.SPACES_MARKET_URL : 'https://spaces.market/space/';
@@ -69,7 +73,8 @@ async function initFabric(): Promise<void> {
     fabric = new Fabric({
       anchor: await AnchorStore.create({
         // localPath: 'data/root-anchors.json',
-        remoteUrls: ['http://70.251.209.207:7225/root-anchors.json']
+        // remoteUrls: ['http://70.251.209.207:7225/root-anchors.json']
+        remoteUrls: ['http://' + anchor + '/root-anchors.json']
       })
     });
     
@@ -145,7 +150,16 @@ async function getSpace(spaceName: string): Promise<any> {
 
 // Express route handler
 app.get('/', async (req: Request, res: Response) => {
-  const query = req.query.q as string;
+  let query = req.query.q as string; // Use let to allow reassignment
+  let subspace: string | null = null; // Variable to hold the subspace part
+
+  if (query && query.includes('@')) {
+    const parts = query.split('@', 2);
+    subspace = parts[0];
+    query = '@' + parts[1]; // Keep the '@' with the main query part
+    console.log(`Extracted subspace: '${subspace}', Updated query: '${query}'`);
+  }
+
   const searchCookie = req.cookies[cookie_name];
 
   if (!searchCookie) {
@@ -173,6 +187,7 @@ app.get('/', async (req: Request, res: Response) => {
                   <option value="${search_engine_google}">Google</option>
                   <option value="${search_engine_duckduckgo}">DuckDuckGo</option>
                   <option value="${search_engine_bing}">Bing</option>
+                  <option value="${search_engine_brave}">Brave</option>
                   <option value="${search_engine_yahoo}">Yahoo</option>
                   <option value="${search_engine_yandex}">Yandex</option>
                   // Add other engines here if uncommented above
@@ -188,6 +203,7 @@ app.get('/', async (req: Request, res: Response) => {
     `);
   }
 
+  
   if (!query) {
     // Create a fallback URL in case globalExternalAddress is not available
     const exampleUrl = globalExternalAddress 
@@ -372,25 +388,25 @@ app.get('/', async (req: Request, res: Response) => {
             if (Buffer.isBuffer(data_elem)) {
                 const buffer = data_elem; // It's already a Buffer
                 const txt_str = buffer.toString('utf8');
-                console.log(space_name + ' txt (Buffer): ' + txt_str);
-                if (txt_str.startsWith(':path:')) {
-                  const path_str = txt_str.substring(6);
-                  if (!found) {
-                    res.writeHead(302, { 'Location': 'http://'+path_str });
+                const parsed = parseSubSpaceString(txt_str);
+                console.log(subspace?.length + ':' + parsed.name + ':' + parsed.path + ':' + space_name + ' txt (Buffer): ' + txt_str);
+                if ( !parsed.name && !parsed.path && (subspace?.length == 0) ) {
+                   console.log(`Parsed name: default, path: ${parsed.path}`);
+                   if (!found) {
+                    res.writeHead(302, { 'Location': 'http://'+txt_str.substring(2) });
                     res.end();
                     found = true;
                   }
                 }
-                else if (txt_str.startsWith(':pkar:')) {
-                  const path_str = txt_str.substring(6);
+                else if (parsed.name && parsed.path && (parsed.name == subspace)) {
+                  console.log(`Parsed name: ${parsed.name}, path: ${parsed.path}`);
                   if (!found) {
-                    res.writeHead(302, { 'Location': 'http://'+path_str+'./' });
+                    res.writeHead(302, { 'Location': 'http://'+parsed.path });
                     res.end();
                     found = true;
                   }
-                }
-                else {
-                  console.log('No path or pkar found in TXT: ' + txt_str );
+                } else {
+                  console.log('Failed to find sub-space in TXT string:', txt_str);
                 }
             } else if (typeof data_elem === 'string') {
                 // Handle if it's already a string
@@ -466,6 +482,8 @@ app.post('/set_search_cookie', (req: Request, res: Response) => {
     return res.status(400).send("Search engine URL (either selected or custom) is required.");
   }
 
+  console.log("Setting search engine cookie to: " + final_search_engine_url);
+
   // Set the cookie
   // You might want to configure options like maxAge, httpOnly, secure (for HTTPS) etc.
   res.cookie(cookie_name, final_search_engine_url, { maxAge: 365 * 24 * 60 * 60 * 1000 }); // Expires in 1 year
@@ -484,6 +502,31 @@ app.get('/del_search_cookie', (req: Request, res: Response) => {
     res.send("Search engine preference cookie not found.");
   }
 });
+
+// Endpoint to clear the search engine cookie
+app.get('/clear', (req: Request, res: Response) => {
+  if (req.cookies[cookie_name]) {
+    res.clearCookie(cookie_name);
+    res.send("Search engine preference cookie cleared.");
+  } else {
+    res.send("Search engine preference cookie not found, nothing to clear.");
+  }
+});
+
+function parseSubSpaceString(input: string): { name: string | null; path: string | null } {
+  // Regex to capture the name between the first two ~ and the path after the second ~
+  const regex = /^~([^~]+)~(.+)$/; 
+  const match = input.match(regex);
+
+  if (match && match[1] && match[2]) {
+    // match[1] contains the captured name
+    // match[2] contains the captured path
+    return { name: match[1], path: match[2] };
+  } else {
+    // Return null if the string doesn't match the expected format
+    return { name: null, path: null };
+  }
+}
 
 // Start server
 async function startServer() {
@@ -554,3 +597,4 @@ async function startServer() {
 }
 
 startServer(); 
+
