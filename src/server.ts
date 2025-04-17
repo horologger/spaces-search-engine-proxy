@@ -391,22 +391,35 @@ app.get('/', async (req: Request, res: Response) => {
                 const parsed = parseSubSpaceString(txt_str);
                 console.log(subspace?.length + ':' + parsed.name + ':' + parsed.path + ':' + space_name + ' txt (Buffer): ' + txt_str);
                 if ( !parsed.name && !parsed.path && (subspace?.length == 0) ) {
-                   console.log(`Parsed name: default, path: ${parsed.path}`);
+                  //  console.log(`Parsed name: default, path: ${parsed.path}`);
                    if (!found) {
+                    console.log('Redirecting to default: ' + txt_str.substring(2));
                     res.writeHead(302, { 'Location': 'http://'+txt_str.substring(2) });
                     res.end();
                     found = true;
                   }
                 }
                 else if (parsed.name && parsed.path && (parsed.name == subspace)) {
-                  console.log(`Parsed name: ${parsed.name}, path: ${parsed.path}`);
+                  // console.log(`Parsed name: ${parsed.name}, path: ${parsed.path}`);
                   if (!found) {
+                    console.log('Redirecting to sub-space: ' + parsed.path);
                     res.writeHead(302, { 'Location': 'http://'+parsed.path });
                     res.end();
                     found = true;
                   }
+                }
+                else if (parsed.name?.startsWith('pk:')) {
+                  // console.log(`PK: ${parsed.name}`);
+                  if (!found) {
+                    console.log('Redirecting to PK: ' + parsed.path?.substring(2)+'./');
+                    res.writeHead(302, { 'Location': 'http://'+parsed.path?.substring(2)+'./' });
+                    res.end();
+                    found = true;
+                  }
                 } else {
-                  console.log('Failed to find sub-space in TXT string:', txt_str);
+                  if (!found) {
+                    console.log('Failed to find sub-space or pk: in TXT string:', txt_str);
+                  }
                 }
             } else if (typeof data_elem === 'string') {
                 // Handle if it's already a string
@@ -424,7 +437,7 @@ app.get('/', async (req: Request, res: Response) => {
         }
       }
       if (!found) {
-        console.log(query + " : No A or TXT:path: or TXT:pkar: record found. Falling back to web search.");
+        console.log(query + " : No A or TXT ~space~ or TXT pk: record found. Falling back to web search.");
         // Fallback: Use the search engine URL from the cookie
         const searchUrlTemplate = req.cookies[cookie_name];
         const searchTerm = query.startsWith('@') ? query.substring(1) : query; // Remove leading '@' if present
