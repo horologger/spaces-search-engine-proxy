@@ -42,11 +42,11 @@ if (!process.env.SPACES_SEP_ANCHOR) {
   console.warn('WARNING: SPACES_SEP_ANCHOR environment variable not set. Using default: 70.251.209.207:7225');
 }
   
-const search_engine_google = process.env.SPACES_SEP_GOOGLE ? process.env.SPACES_SEP_GOOGLE : '{google:baseURL}search?q=%s&{google:RLZ}{google:originalQueryForSuggestion}{google:assistedQueryStats}{google:searchFieldtrialParameter}{google:language}{google:prefetchSource}{google:searchClient}{google:sourceId}{google:contextualSearchVersion}ie={inputEncoding}';
+const search_engine_google = process.env.SPACES_SEP_GOOGLE ? process.env.SPACES_SEP_GOOGLE : 'https://www.google.com/search?q=%s';
 const search_engine_duckduckgo = process.env.SPACES_SEP_DUCKDUCKGO ? process.env.SPACES_SEP_DUCKDUCKGO : 'https://duckduckgo.com/?q=%s';
 const search_engine_bing = process.env.SPACES_SEP_BING ? process.env.SPACES_SEP_BING : 'https://www.bing.com/search?q=%s';
 const search_engine_yahoo = process.env.SPACES_SEP_YAHOO ? process.env.SPACES_SEP_YAHOO : 'https://search.yahoo.com/search{google:pathWildcard}?ei={inputEncoding}&fr=crmas_sfp&p=%s';
-const search_engine_yandex = process.env.SPACES_SEP_YANDEX ? process.env.SPACES_SEP_YANDEX : 'https://yandex.com/{yandex:searchPath}?text=%s';
+const search_engine_yandex = process.env.SPACES_SEP_YANDEX ? process.env.SPACES_SEP_YANDEX : 'https://yandex.com/search/?text=%s';
 // const search_engine_ask = process.env.SPACES_SEP_ASK ? process.env.SPACES_SEP_ASK : 'https://www.ask.com/web?q=%s';
 // const search_engine_baidu = process.env.SPACES_SEP_BAIDU ? process.env.SPACES_SEP_BAIDU : 'https://www.baidu.com/s?wd=%s';
 // const search_engine_qwant = process.env.SPACES_SEP_QWANT ? process.env.SPACES_SEP_QWANT : 'https://www.qwant.com/?q=%s';
